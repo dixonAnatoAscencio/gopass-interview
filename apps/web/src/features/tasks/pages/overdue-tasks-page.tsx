@@ -1,12 +1,14 @@
 import { useState, useMemo } from 'react';
 import { Icon } from '../../../shared/components/ui/Icon';
 import {
-  PriorityBadge, StatusBadge, Avatar, MetricCard, PageHeader,
+  PriorityBadge, StatusBadge, Avatar, MetricCard, PageHeader, Skeleton,
 } from '../../../shared/components/ui/ui-components';
 import {
   TASKS, getUserById, getProjectById, getDaysOverdue, getPriorityLabel, type MockTask,
 } from '../../../mock-data';
 import type { AddToast } from '../../../app/layouts/AppShell';
+import { useOverdueTasks } from '../hooks/use-tasks';
+import type { TaskDto } from '@gopass/contracts';
 
 type OverdueTasksPageProps = {
   navigate: (p: string) => void;
@@ -44,16 +46,38 @@ const priorityColors: Record<string, string> = {
   low:    '#16a34a',
 };
 
+// Adapts TaskDto from API to MockTask shape for UI compatibility
+function toMockTask(t: TaskDto): MockTask {
+  return {
+    id: t.id, title: t.title, description: t.description ?? '',
+    projectId: t.projectId, status: t.status.toLowerCase(),
+    priority: t.priority.toLowerCase(),
+    assigneeId: t.assignee?.id ? parseInt(t.assignee.id, 10) || null : null,
+    creatorId: 0, dueDate: t.dueDate ?? '',
+    completedAt: t.completedAt ?? null,
+    tags: t.tags ?? [], comments: 0, checklist: [], createdAt: t.createdAt,
+  };
+}
+
 export function OverdueTasksPage({ addToast, onOpenTask }: OverdueTasksPageProps) {
   const [groupBy, setGroupBy] = useState<GroupBy>('priority');
-  const [tasks, setTasks]     = useState<MockTask[]>(TASKS);
 
+  // Datos reales del API
+  const { data: apiOverdue, isLoading } = useOverdueTasks();
+
+  // Usa datos del API si están disponibles, si no usa mock
   const overdue = useMemo<MockTask[]>(() => {
-    const today = new Date('2026-06-10');
-    return tasks.filter(
-      t => t.status !== 'done' && t.status !== 'archived' && new Date(t.dueDate) < today,
-    );
-  }, [tasks]);
+    if (apiOverdue) return apiOverdue.map(toMockTask);
+    const today = new Date();
+    return TASKS.filter(t => t.status !== 'done' && t.status !== 'archived' && new Date(t.dueDate) < today);
+  }, [apiOverdue]);
+
+  // setTasks ya no es necesario — mantenemos para acciones locales temporales
+  const [localOverrides, setLocalOverrides] = useState<Record<string, string>>({});
+  const tasks = useMemo(() =>
+    overdue.map(t => localOverrides[t.id] ? { ...t, status: localOverrides[t.id] } : t),
+    [overdue, localOverrides]
+  );
 
   const critical         = overdue.filter(t => t.priority === 'urgent');
   const thisWeek         = overdue.filter(t => getDaysOverdue(t.dueDate) <= 7);
@@ -64,23 +88,23 @@ export function OverdueTasksPage({ addToast, onOpenTask }: OverdueTasksPageProps
     if (groupBy === 'priority') {
       const order = ['urgent', 'high', 'medium', 'low'];
       return order
-        .map(p => ({ key: p, label: getPriorityLabel(p), tasks: overdue.filter(t => t.priority === p) }))
+        .map(p => ({ key: p, label: getPriorityLabel(p), tasks: tasks.filter(t => t.priority === p) }))
         .filter(g => g.tasks.length > 0);
     }
     if (groupBy === 'project') {
-      return [...new Set(overdue.map(t => t.projectId))].map(pid => {
+      return [...new Set(tasks.map(t => t.projectId))].map(pid => {
         const p = getProjectById(pid);
-        return { key: pid, label: p?.name ?? pid, tasks: overdue.filter(t => t.projectId === pid) };
+        return { key: pid, label: p?.name ?? pid, tasks: tasks.filter(t => t.projectId === pid) };
       });
     }
     if (groupBy === 'assignee') {
-      const assigneeIds = [...new Set(overdue.map(t => t.assigneeId))];
+      const assigneeIds = [...new Set(tasks.map(t => t.assigneeId))];
       return assigneeIds.map(aid => {
         const u = getUserById(aid);
         return {
           key: String(aid),
           label: u?.name ?? 'Sin asignar',
-          tasks: overdue.filter(t => t.assigneeId === aid),
+          tasks: tasks.filter(t => t.assigneeId === aid),
         };
       });
     }
@@ -95,12 +119,22 @@ export function OverdueTasksPage({ addToast, onOpenTask }: OverdueTasksPageProps
       complete:   'Tarea completada',
     };
     if (action === 'complete') {
-      setTasks(ts =>
-        ts.map(t => (t.id === taskId ? { ...t, status: 'done', completedAt: '2026-06-10' } : t)),
-      );
+      setLocalOverrides(prev => ({ ...prev, [taskId]: 'done' }));
     }
     addToast({ message: msgs[action], type: 'success' });
   };
+
+  if (isLoading) {
+    return (
+      <div>
+        <PageHeader title="Tareas vencidas" subtitle="Cargando…" />
+        <div className="metrics-grid" style={{ gridTemplateColumns:'repeat(4,1fr)', marginBottom:24 }}>
+          {[1,2,3,4].map(i => <div key={i} className="metric-card"><Skeleton height={80} /></div>)}
+        </div>
+        <div className="card"><Skeleton height={200} /></div>
+      </div>
+    );
+  }
 
   return (
     <div>

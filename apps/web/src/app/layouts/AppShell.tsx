@@ -1,7 +1,8 @@
 import { useState, useCallback, type ReactNode } from 'react';
 import { Icon } from '../../shared/components/ui/Icon';
 import { Avatar, Btn, ToastContainer, type Toast } from '../../shared/components/ui/ui-components';
-import { getUserById } from '../../mock-data';
+import { useAuthStore } from '../../shared/stores/auth.store';
+import type { MockUser } from '../../mock-data';
 
 const NAV_ITEMS = [
   { id:'dashboard',       label:'Dashboard',       icon:'layout-dashboard' },
@@ -34,7 +35,11 @@ interface SidebarProps {
 }
 
 function Sidebar({ currentPage, navigate, collapsed, onToggle }: SidebarProps) {
-  const user = getUserById(1);
+  const authUser = useAuthStore((s) => s.user);
+  const logout   = useAuthStore((s) => s.logout);
+  const user: MockUser | null = authUser
+    ? { id: 1, name: authUser.name, email: authUser.email, role: authUser.role, initials: authUser.name.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase(), color: '#6366f1' }
+    : null;
   const cls = ['sidebar', collapsed ? 'collapsed' : ''].filter(Boolean).join(' ');
 
   return (
@@ -68,7 +73,7 @@ function Sidebar({ currentPage, navigate, collapsed, onToggle }: SidebarProps) {
             <div className="sidebar-user-role">{user?.role}</div>
           </div>
           {!collapsed && (
-            <button className="btn btn-ghost" style={{padding:'0 4px',color:'var(--sidebar-text-muted)'}} title="Cerrar sesión">
+            <button className="btn btn-ghost" style={{padding:'0 4px',color:'var(--sidebar-text-muted)'}} title="Cerrar sesión" onClick={logout}>
               <Icon name="log-out" size={14} />
             </button>
           )}
@@ -91,6 +96,11 @@ interface HeaderProps {
 function Header({ currentPage, projectName, onNewTask, onNewProject }: HeaderProps) {
   const crumbs = BREADCRUMBS[currentPage] ?? [currentPage];
   const [search, setSearch] = useState('');
+  const authUser = useAuthStore((s) => s.user);
+  const headerUser: MockUser | null = authUser
+    ? { id: 1, name: authUser.name, email: authUser.email, role: authUser.role, initials: authUser.name.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase(), color: '#6366f1' }
+    : null;
+  const shortName = authUser?.name.split(' ')[0] ?? 'Usuario';
 
   return (
     <header className="header">
@@ -118,8 +128,8 @@ function Header({ currentPage, projectName, onNewTask, onNewProject }: HeaderPro
           <span className="header-notif-dot" />
         </button>
         <div style={{display:'flex',alignItems:'center',gap:8,padding:'0 4px',cursor:'pointer',borderLeft:'1px solid var(--border)',marginLeft:4}}>
-          <Avatar user={getUserById(1)} size="sm" />
-          <span style={{fontSize:12.5,fontWeight:600,color:'var(--text-secondary)'}}>Dixon A.</span>
+          <Avatar user={headerUser} size="sm" />
+          <span style={{fontSize:12.5,fontWeight:600,color:'var(--text-secondary)'}}>{shortName}</span>
         </div>
       </div>
     </header>

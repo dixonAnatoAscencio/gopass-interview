@@ -1,13 +1,14 @@
 import { useState, useMemo } from 'react';
 import { Icon } from '../../../shared/components/ui/Icon';
 import {
-  RiskBadge, ProgressBar, Btn, MetricCard, PageHeader, InsightCard,
+  RiskBadge, ProgressBar, Btn, MetricCard, PageHeader, InsightCard, Skeleton,
 } from '../../../shared/components/ui/ui-components';
 import {
   PROJECTS, TASKS, ACTIVITIES, RECOMMENDATIONS, getUserById, getProjectById,
   getOverdueTasks, formatRelative,
 } from '../../../mock-data';
 import type { AddToast } from '../../../app/layouts/AppShell';
+import { useGlobalSummary } from '../../analytics/hooks/use-analytics';
 
 type DashboardPageProps = {
   navigate: (p: string) => void;
@@ -41,15 +42,17 @@ type ActivityIconMap = Record<string, ActivityIconConfig>;
 export function DashboardPage({ navigate, onNewTask, onNewProject }: DashboardPageProps) {
   const [ignoredInsights, setIgnoredInsights] = useState<string[]>([]);
 
-  const overdueTasks = useMemo(() => getOverdueTasks(), []);
-  const atRiskProjects = useMemo(
-    () => PROJECTS.filter(p => p.riskLevel === 'high' || p.riskLevel === 'medium'),
-    [],
-  );
-  const completionRate = useMemo(() => {
+  // Datos reales del API
+  const { data: summary, isLoading: summaryLoading } = useGlobalSummary();
+
+  // Fallback a mock data si el API no responde
+  const overdueTasks     = useMemo(() => getOverdueTasks(), []);
+  const atRiskProjects   = useMemo(() => PROJECTS.filter(p => p.riskLevel === 'high' || p.riskLevel === 'medium'), []);
+  const mockCompletionRate = useMemo(() => {
     const done = TASKS.filter(t => t.status === 'done').length;
     return Math.round((done / TASKS.length) * 100);
   }, []);
+  const completionRate = summary?.completionRate ?? mockCompletionRate;
 
   const tasksByStatus = useMemo<TasksByStatus>(() => {
     const groups: TasksByStatus = { todo: 0, in_progress: 0, blocked: 0, in_review: 0, done: 0 };
@@ -94,51 +97,39 @@ export function DashboardPage({ navigate, onNewTask, onNewProject }: DashboardPa
       />
 
       <div className="metrics-grid metrics-grid-5" style={{ marginBottom: 24 }}>
-        <MetricCard
-          icon="folder"
-          iconBg="#eff6ff"
-          iconColor="#6366f1"
-          value={PROJECTS.filter(p => p.status !== 'archived').length}
-          label="Proyectos activos"
-          change="+1 este mes"
-          changeType="positive"
-        />
-        <MetricCard
-          icon="check-square"
-          iconBg="#f5f3ff"
-          iconColor="#7c3aed"
-          value={tasksByStatus.todo}
-          label="Tareas pendientes"
-          change="3 nuevas hoy"
-          changeType="neutral"
-        />
-        <MetricCard
-          icon="activity"
-          iconBg="#eff6ff"
-          iconColor="#2563eb"
-          value={tasksByStatus.in_progress}
-          label="En progreso"
-          change="+2 esta semana"
-          changeType="positive"
-        />
-        <MetricCard
-          icon="clock"
-          iconBg="#fff1f2"
-          iconColor="#e11d48"
-          value={overdueTasks.length}
-          label="Tareas vencidas"
-          change="Requieren atención"
-          changeType="negative"
-        />
-        <MetricCard
-          icon="percent"
-          iconBg="#f0fdf4"
-          iconColor="#16a34a"
-          value={`${completionRate}%`}
-          label="Tasa de finalización"
-          change="+12% esta semana"
-          changeType="positive"
-        />
+        {summaryLoading ? (
+          Array.from({length:5}).map((_,i) => (
+            <div key={i} className="metric-card"><Skeleton height={80} /></div>
+          ))
+        ) : (
+          <>
+            <MetricCard
+              icon="folder" iconBg="#eff6ff" iconColor="#6366f1"
+              value={summary?.totalProjects ?? PROJECTS.filter(p => p.status !== 'archived').length}
+              label="Proyectos activos" change="+1 este mes" changeType="positive"
+            />
+            <MetricCard
+              icon="check-square" iconBg="#f5f3ff" iconColor="#7c3aed"
+              value={summary?.byStatus?.['TODO'] ?? tasksByStatus.todo}
+              label="Tareas pendientes" change="3 nuevas hoy" changeType="neutral"
+            />
+            <MetricCard
+              icon="activity" iconBg="#eff6ff" iconColor="#2563eb"
+              value={summary?.byStatus?.['IN_PROGRESS'] ?? tasksByStatus.in_progress}
+              label="En progreso" change="+2 esta semana" changeType="positive"
+            />
+            <MetricCard
+              icon="clock" iconBg="#fff1f2" iconColor="#e11d48"
+              value={summary?.overdueTasks ?? overdueTasks.length}
+              label="Tareas vencidas" change="Requieren atención" changeType="negative"
+            />
+            <MetricCard
+              icon="percent" iconBg="#f0fdf4" iconColor="#16a34a"
+              value={`${completionRate}%`}
+              label="Tasa de finalización" change="+12% esta semana" changeType="positive"
+            />
+          </>
+        )}
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 20, marginBottom: 20 }}>

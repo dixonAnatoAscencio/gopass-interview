@@ -2,12 +2,14 @@ import { useState, useMemo } from 'react';
 import { Icon } from '../../../shared/components/ui/Icon';
 import {
   RiskBadge, Avatar, ProgressBar, Btn, EmptyState, PageHeader,
-  FilterSelect, SearchInput,
+  FilterSelect, SearchInput, Skeleton,
 } from '../../../shared/components/ui/ui-components';
 import {
   USERS, PROJECTS, getUserById, formatDate, type MockProject,
 } from '../../../mock-data';
 import type { AddToast } from '../../../app/layouts/AppShell';
+import { useProjects, useArchiveProject } from '../hooks/use-projects';
+import type { ProjectDto } from '@gopass/contracts';
 
 type ProjectsListPageProps = {
   navigate: (p: string) => void;
@@ -35,23 +37,60 @@ const projectStatusLabel = (s: string): string =>
     archived: 'Archivado',
   }[s] ?? s);
 
-export function ProjectsListPage({ navigate, onNewProject }: ProjectsListPageProps) {
+// Adapter: convierte ProjectDto del API al shape que usa la UI
+function toMockProject(p: ProjectDto): MockProject {
+  return {
+    id: p.id,
+    name: p.name,
+    description: p.description ?? '',
+    status: p.status.toLowerCase(),
+    progress: p.completedTasksCount > 0 ? Math.round((p.completedTasksCount / (p.tasksCount || 1)) * 100) : 0,
+    ownerId: 0,
+    memberIds: [],
+    totalTasks: p.tasksCount ?? 0,
+    completedTasks: p.completedTasksCount ?? 0,
+    overdueTasks: 0,
+    blockedTasks: 0,
+    startDate: p.createdAt,
+    targetDate: '',
+    color: p.color ?? '#6366f1',
+    riskLevel: 'low',
+    createdAt: p.createdAt,
+  };
+}
+
+export function ProjectsListPage({ navigate, addToast, onNewProject }: ProjectsListPageProps) {
   const [search, setSearch]           = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [ownerFilter, setOwnerFilter]   = useState('');
   const [viewMode, setViewMode]         = useState<ViewMode>('cards');
-  const [projects, setProjects]         = useState<MockProject[]>(PROJECTS);
+
+  const { data: apiData, isLoading, isError } = useProjects();
+  const archiveMutation = useArchiveProject();
+
+  // Usa datos reales del API; si no están disponibles, cae al mock
+  const allProjects: MockProject[] = useMemo(() => {
+    if (apiData?.data) return apiData.data.map(toMockProject);
+    return PROJECTS;
+  }, [apiData]);
 
   const filtered = useMemo(
     () =>
-      projects.filter(p => {
+      allProjects.filter(p => {
         if (search && !p.name.toLowerCase().includes(search.toLowerCase())) return false;
         if (statusFilter && p.status !== statusFilter) return false;
         if (ownerFilter && String(p.ownerId) !== ownerFilter) return false;
         return true;
       }),
-    [projects, search, statusFilter, ownerFilter],
+    [allProjects, search, statusFilter, ownerFilter],
   );
+
+  const handleArchive = (id: string) => {
+    archiveMutation.mutate(id, {
+      onSuccess: () => addToast({ message: 'Proyecto archivado', type: 'success' }),
+      onError: () => addToast({ message: 'Error al archivar proyecto', type: 'error' }),
+    });
+  };
 
   const clearFilters = () => {
     setSearch('');
@@ -59,8 +98,29 @@ export function ProjectsListPage({ navigate, onNewProject }: ProjectsListPagePro
     setOwnerFilter('');
   };
 
-  const handleArchive = (id: string) =>
-    setProjects(ps => ps.map(p => (p.id === id ? { ...p, status: 'archived' } : p)));
+  // handleArchive already declared above — remove this duplicate
+
+  if (isLoading) {
+    return (
+      <div>
+        <PageHeader title="Proyectos" subtitle="Cargando…" />
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(320px,1fr))', gap:16 }}>
+          {[1,2,3,4].map(i => <div key={i} className="card"><Skeleton height={160} /></div>)}
+        </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div>
+        <PageHeader title="Proyectos" />
+        <div className="card" style={{ textAlign:'center', padding:40 }}>
+          <p style={{ color:'var(--text-muted)' }}>Error cargando proyectos. Mostrando datos locales.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>

@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Icon } from '../../../shared/components/ui/Icon';
 import {
-  Btn, Tabs, EmptyState, MetricCard, PageHeader,
+  Btn, Tabs, EmptyState, MetricCard, PageHeader, Skeleton,
 } from '../../../shared/components/ui/ui-components';
 import {
   TASKS, RECOMMENDATIONS, getProjectById, formatRelative, type MockRecommendation,
 } from '../../../mock-data';
 import type { AddToast } from '../../../app/layouts/AppShell';
+import { useRecommendations } from '../hooks/use-recommendations';
+import type { RecommendationDto } from '@gopass/contracts';
 
 type RecommendationsPageProps = {
   navigate: (p: string) => void;
@@ -47,11 +49,40 @@ const severityConfig: Record<string, SeverityConfig> = {
   low:      { bg: '#f0fdf4', color: '#16a34a', label: 'Baja' },
 };
 
+// Adapts RecommendationDto from API to ExtendedRec shape
+function toExtendedRec(r: RecommendationDto): ExtendedRec {
+  return {
+    id: r.id,
+    type: r.type ?? 'risk',
+    severity: r.confidence >= 0.85 ? 'critical' : r.confidence >= 0.7 ? 'high' : r.confidence >= 0.5 ? 'medium' : 'low',
+    title: r.title,
+    description: r.description,
+    projectId: r.projectId ?? null,
+    taskId: r.taskId ?? null,
+    action: 'Ver detalle',
+    ignored: !!r.dismissedAt,
+    applied: !!r.acceptedAt,
+  };
+}
+
 export function RecommendationsPage({ addToast }: RecommendationsPageProps) {
   const [activeTab, setActiveTab] = useState('all');
-  const [recs, setRecs]           = useState<ExtendedRec[]>(
-    RECOMMENDATIONS.map(r => ({ ...r, applied: false, ignored: false })),
-  );
+
+  const { data: apiRecs, isLoading } = useRecommendations();
+
+  const [localState] = useState<Record<string, { applied?: boolean; ignored?: boolean }>>({});
+
+  // Usa datos reales del API; fallback al mock
+  const baseRecs: ExtendedRec[] = useMemo(() => {
+    const source = apiRecs?.length ? apiRecs.map(toExtendedRec) : RECOMMENDATIONS.map(r => ({ ...r, applied: false, ignored: false }));
+    return source.map(r => ({ ...r, ...localState[r.id] }));
+  }, [apiRecs, localState]);
+
+  const [recs, setRecs] = useState<ExtendedRec[]>([]);
+  // Sync recs with baseRecs only on first load (so local apply/ignore actions persist)
+  useMemo(() => {
+    if (recs.length === 0 && baseRecs.length > 0) setRecs(baseRecs);
+  }, [baseRecs, recs.length]);
 
   const apply = (id: string) => {
     setRecs(rs => rs.map(r => (r.id === id ? { ...r, applied: true, ignored: false } : r)));
@@ -83,6 +114,17 @@ export function RecommendationsPage({ addToast }: RecommendationsPageProps) {
   });
 
   const applied = recs.filter(r => r.applied);
+
+  if (isLoading) {
+    return (
+      <div>
+        <PageHeader title="Recomendaciones" subtitle="Cargando recomendaciones…" />
+        <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+          {[1,2,3].map(i => <div key={i} className="card"><Skeleton height={100} /></div>)}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>

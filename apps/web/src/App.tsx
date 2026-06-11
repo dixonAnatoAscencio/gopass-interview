@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { ToastContainer } from './shared/components/ui/ui-components';
 import { type Toast } from './shared/components/ui/ui-components';
+import { useAuthStore } from './shared/stores/auth.store';
 import { LoginPage } from './features/auth/pages/login-page';
 import { DashboardPage } from './features/dashboard/pages/dashboard-page';
 import { ProjectsListPage } from './features/projects/pages/projects-list-page';
@@ -24,7 +25,7 @@ void TaskBoardPage;
 void KanbanBoard;
 
 export function App() {
-  const [isLoggedIn,     setIsLoggedIn]     = useState(false);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const [selectedProject, setSelectedProject] = useState('p1');
   const [selectedTask,   setSelectedTask]   = useState<MockTask | null>(null);
   const [taskDrawerOpen, setTaskDrawerOpen] = useState(false);
@@ -43,8 +44,8 @@ export function App() {
     setTaskDrawerOpen(true);
   }, []);
 
-  if (!isLoggedIn) {
-    return <LoginPage onLogin={() => setIsLoggedIn(true)} />;
+  if (!isAuthenticated) {
+    return <LoginPage />;
   }
 
   return (
