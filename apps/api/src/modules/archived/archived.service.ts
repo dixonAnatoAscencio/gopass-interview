@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../infrastructure/prisma/prisma.service';
-import { ProjectStatus, TaskStatus } from '@gopass/contracts';
 
 @Injectable()
 export class ArchivedService {
@@ -9,7 +8,8 @@ export class ArchivedService {
   async getArchivedProjects(userId: string) {
     return this.prisma.project.findMany({
       where: {
-        status: ProjectStatus.ARCHIVED as unknown as Parameters<typeof this.prisma.project.findMany>[0]['where']['status'],
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        status: 'ARCHIVED' as any,
         OR: [{ ownerId: userId }, { members: { some: { userId } } }],
       },
       include: {
@@ -27,7 +27,8 @@ export class ArchivedService {
 
     return this.prisma.task.findMany({
       where: {
-        status: TaskStatus.ARCHIVED as unknown as Parameters<typeof this.prisma.task.findMany>[0]['where']['status'],
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        status: 'ARCHIVED' as any,
         projectId: { in: memberProjectIds },
       },
       include: {

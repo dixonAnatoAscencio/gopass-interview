@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../infrastructure/prisma/prisma.service';
 import type { AuditAction } from '@gopass/contracts';
 
@@ -23,14 +24,15 @@ export class AuditService {
   async log(dto: CreateAuditLogDto) {
     return this.prisma.auditLog.create({
       data: {
-        action: dto.action as unknown as Parameters<typeof this.prisma.auditLog.create>[0]['data']['action'],
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        action: dto.action as any,
         entityType: dto.entityType,
         entityId: dto.entityId,
         projectId: dto.projectId,
         userId: dto.userId,
-        previousData: dto.previousData,
-        newData: dto.newData,
-        metadata: dto.metadata,
+        previousData: dto.previousData as Prisma.InputJsonValue | undefined,
+        newData: dto.newData as Prisma.InputJsonValue | undefined,
+        metadata: dto.metadata as Prisma.InputJsonValue | undefined,
         ipAddress: dto.ipAddress,
         userAgent: dto.userAgent,
         correlationId: dto.correlationId,

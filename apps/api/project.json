@@ -19,14 +19,25 @@
       "executor": "@nx/js:node",
       "defaultConfiguration": "development",
       "options": {
-        "buildTarget": "api:build"
+        "buildTarget": "api:build",
+        "runBuildTargetDependencies": false
       },
       "configurations": {
         "development": {
-          "buildTarget": "api:build:development"
+          "buildTarget": "api:build:development",
+          "inspect": false
         },
         "production": {
           "buildTarget": "api:build:production"
+        }
+      }
+    },
+    "serve-ts": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "node -r tsconfig-paths/register -r @swc-node/register apps/api/src/main.ts",
+        "env": {
+          "TS_NODE_PROJECT": "apps/api/tsconfig.app.json"
         }
       }
     },

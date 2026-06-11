@@ -2,8 +2,9 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { TasksRepository } from '../infrastructure/tasks.repository';
 import { OutboxRepository } from '../../infrastructure/outbox/outbox.repository';
 import { ProjectsService } from '../../projects/application/projects.service';
-import type { CreateTaskDto, UpdateTaskDto } from '@gopass/contracts';
 import { TaskStatus, OutboxEventType } from '@gopass/contracts';
+import type { CreateTaskDto } from '../dto/create-task.dto';
+import type { UpdateTaskDto } from '../dto/update-task.dto';
 import { TaskStatusVO } from '@gopass/domain';
 
 @Injectable()
@@ -51,7 +52,7 @@ export class TasksService {
   async updateStatus(id: string, newStatus: TaskStatus, changedById: string, comment?: string) {
     const task = await this.findOneOrThrow(id);
 
-    const currentStatusVO = new TaskStatusVO(task.status);
+    const currentStatusVO = new TaskStatusVO(task.status as unknown as TaskStatus);
     if (!currentStatusVO.canTransitionTo(newStatus)) {
       throw new Error(`Cannot transition from ${task.status} to ${newStatus}`);
     }

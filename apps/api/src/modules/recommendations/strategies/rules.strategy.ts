@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import type { RecommendationDto } from '@gopass/contracts';
-import { TaskStatus, TaskPriority } from '@gopass/contracts';
 
 @Injectable()
 export class RulesRecommendationStrategy {
@@ -14,15 +13,14 @@ export class RulesRecommendationStrategy {
   async generate(userId: string, projectId?: string): Promise<RecommendationDto[]> {
     const recommendations: RecommendationDto[] = [];
 
-    const overdueFilter = {
-      ...(projectId ? { projectId } : {}),
-      assigneeId: userId,
-      dueDate: { lt: new Date() },
-      status: { notIn: [TaskStatus.DONE as string, TaskStatus.ARCHIVED as string] as Parameters<typeof this.prisma.task.findMany>[0]['where']['status']['notIn'] },
-    };
-
     const overdueTasks = await this.prisma.task.findMany({
-      where: overdueFilter,
+      where: {
+        ...(projectId ? { projectId } : {}),
+        assigneeId: userId,
+        dueDate: { lt: new Date() },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        status: { notIn: ['DONE', 'ARCHIVED'] as any },
+      },
       take: 5,
       orderBy: { dueDate: 'asc' },
     });
@@ -45,8 +43,10 @@ export class RulesRecommendationStrategy {
     const blockedTasks = await this.prisma.task.findMany({
       where: {
         ...(projectId ? { projectId } : {}),
-        status: TaskStatus.BLOCKED as unknown as Parameters<typeof this.prisma.task.findMany>[0]['where']['status'],
-        priority: { in: [TaskPriority.HIGH as string, TaskPriority.URGENT as string] as Parameters<typeof this.prisma.task.findMany>[0]['where']['priority']['in'] },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        status: 'BLOCKED' as any,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        priority: { in: ['HIGH', 'URGENT'] as any },
       },
       take: 3,
     });

@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import type { CreateTaskDto, UpdateTaskDto } from '@gopass/contracts';
+import { $Enums } from '@prisma/client';
 import { TaskStatus } from '@gopass/contracts';
+import type { CreateTaskDto } from '../dto/create-task.dto';
+import type { UpdateTaskDto } from '../dto/update-task.dto';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 
 const USER_SELECT = {
@@ -10,6 +12,10 @@ const USER_SELECT = {
   avatarUrl: true,
   role: true,
 } as const;
+
+// Prisma enums and contracts enums share the same string values — safe to cast.
+const toPrismaStatus = (s: TaskStatus) => s as unknown as $Enums.TaskStatus;
+const toPrismaPriority = (p: string) => p as unknown as $Enums.TaskPriority;
 
 @Injectable()
 export class TasksRepository {
@@ -43,12 +49,7 @@ export class TasksRepository {
     return this.prisma.task.findMany({
       where: {
         dueDate: { lt: new Date() },
-        status: {
-          notIn: [
-            TaskStatus.DONE as unknown as Parameters<typeof this.prisma.task.findMany>[0]['where']['status'],
-            TaskStatus.ARCHIVED as unknown as Parameters<typeof this.prisma.task.findMany>[0]['where']['status'],
-          ] as unknown as Parameters<typeof this.prisma.task.findMany>[0]['where']['status'],
-        },
+        status: { notIn: [toPrismaStatus(TaskStatus.DONE), toPrismaStatus(TaskStatus.ARCHIVED)] },
       },
       include: this.include,
     });
@@ -59,7 +60,7 @@ export class TasksRepository {
       data: {
         title: data.title,
         description: data.description,
-        priority: data.priority as unknown as Parameters<typeof this.prisma.task.create>[0]['data']['priority'],
+        priority: data.priority ? toPrismaPriority(data.priority) : 'MEDIUM',
         projectId: data.projectId,
         assigneeId: data.assigneeId,
         createdById: data.createdById,
@@ -67,10 +68,7 @@ export class TasksRepository {
         estimatedHours: data.estimatedHours,
         tags: data.tags ?? [],
         statusHistory: {
-          create: {
-            toStatus: TaskStatus.TODO as unknown as Parameters<typeof this.prisma.taskStatusHistory.create>[0]['data']['toStatus'],
-            changedById: data.createdById,
-          },
+          create: { toStatus: toPrismaStatus(TaskStatus.TODO), changedById: data.createdById },
         },
       },
       include: this.include,
@@ -83,7 +81,7 @@ export class TasksRepository {
       data: {
         title: data.title,
         description: data.description,
-        priority: data.priority as unknown as Parameters<typeof this.prisma.task.update>[0]['data']['priority'],
+        priority: data.priority ? toPrismaPriority(data.priority) : undefined,
         assigneeId: data.assigneeId,
         dueDate: data.dueDate !== undefined ? (data.dueDate ? new Date(data.dueDate) : null) : undefined,
         estimatedHours: data.estimatedHours,
@@ -99,12 +97,12 @@ export class TasksRepository {
     return this.prisma.task.update({
       where: { id },
       data: {
-        status: status as unknown as Parameters<typeof this.prisma.task.update>[0]['data']['status'],
+        status: toPrismaStatus(status),
         completedAt: status === TaskStatus.DONE ? new Date() : undefined,
         statusHistory: {
           create: {
             fromStatus: task.status,
-            toStatus: status as unknown as Parameters<typeof this.prisma.taskStatusHistory.create>[0]['data']['toStatus'],
+            toStatus: toPrismaStatus(status),
             comment,
             changedById,
           },
@@ -117,11 +115,7 @@ export class TasksRepository {
   async archive(id: string, archivedById: string) {
     return this.prisma.task.update({
       where: { id },
-      data: {
-        status: TaskStatus.ARCHIVED as unknown as Parameters<typeof this.prisma.task.update>[0]['data']['status'],
-        archivedAt: new Date(),
-        archivedById,
-      },
+      data: { status: toPrismaStatus(TaskStatus.ARCHIVED), archivedAt: new Date(), archivedById },
       include: this.include,
     });
   }
@@ -129,11 +123,7 @@ export class TasksRepository {
   async restore(id: string) {
     return this.prisma.task.update({
       where: { id },
-      data: {
-        status: TaskStatus.TODO as unknown as Parameters<typeof this.prisma.task.update>[0]['data']['status'],
-        archivedAt: null,
-        archivedById: null,
-      },
+      data: { status: toPrismaStatus(TaskStatus.TODO), archivedAt: null, archivedById: null },
       include: this.include,
     });
   }
