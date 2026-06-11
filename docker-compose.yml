@@ -1,0 +1,95 @@
+version: '3.9'
+
+services:
+  # ─── Database ───────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: gopass-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-gopass}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gopass_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-gopass_dev}
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-gopass}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── Redis (cache / queue) ───────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: gopass-redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── API ────────────────────────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: gopass-api
+    restart: unless-stopped
+    env_file:
+      - apps/api/.env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-gopass}:${POSTGRES_PASSWORD:-gopass_secret}@postgres:5432/${POSTGRES_DB:-gopass_dev}
+      REDIS_URL: redis://redis:6379
+      NODE_ENV: production
+    ports:
+      - '${API_PORT:-3000}:3000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:3000/api/v1/health/liveness']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ─── Worker ─────────────────────────────────────────────────────────────────
+  worker:
+    build:
+      context: .
+      dockerfile: apps/worker/Dockerfile
+    container_name: gopass-worker
+    restart: unless-stopped
+    env_file:
+      - apps/worker/.env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-gopass}:${POSTGRES_PASSWORD:-gopass_secret}@postgres:5432/${POSTGRES_DB:-gopass_dev}
+      REDIS_URL: redis://redis:6379
+      NODE_ENV: production
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ─── Web ────────────────────────────────────────────────────────────────────
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: gopass-web
+    restart: unless-stopped
+    ports:
+      - '${WEB_PORT:-5173}:80'
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
+  redis_data:

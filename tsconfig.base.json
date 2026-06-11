@@ -1,0 +1,33 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "rootDir": ".",
+    "sourceMap": true,
+    "declaration": false,
+    "moduleResolution": "node",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "importHelpers": true,
+    "target": "es2017",
+    "module": "commonjs",
+    "lib": ["es2017", "dom"],
+    "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
+    "baseUrl": ".",
+    "strict": true,
+    "noImplicitOverride": true,
+    "noPropertyAccessFromIndexSignature": false,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "paths": {
+      "@gopass/shared": ["libs/shared/src/index.ts"],
+      "@gopass/contracts": ["libs/contracts/src/index.ts"],
+      "@gopass/domain": ["libs/domain/src/index.ts"],
+      "@gopass/application": ["libs/application/src/index.ts"],
+      "@gopass/infrastructure": ["libs/infrastructure/src/index.ts"],
+      "@gopass/ui": ["libs/ui/src/index.ts"],
+      "@gopass/config": ["libs/config/src/index.ts"]
+    }
+  },
+  "exclude": ["node_modules", "tmp"]
+}
