@@ -37,8 +37,8 @@ export function LoginPage() {
       <div style={{ flex:'0 0 48%', background:'linear-gradient(135deg,#1e1b4b 0%,#312e81 50%,#4338ca 100%)', display:'flex', flexDirection:'column', justifyContent:'space-between', padding:'48px' }}>
         <div>
           <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:48 }}>
-            <div style={{ width:40, height:40, background:'rgba(255,255,255,0.2)', borderRadius:10, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:800, fontSize:16, color:'white' }}>TF</div>
-            <span style={{ fontSize:20, fontWeight:800, color:'white' }}>TaskFlow Pro</span>
+            <div style={{ width:40, height:40, background:'rgba(255,255,255,0.2)', borderRadius:10, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:800, fontSize:16, color:'white' }}>PT</div>
+            <span style={{ fontSize:20, fontWeight:800, color:'white' }}>Prueba Técnica Senior</span>
           </div>
           <h2 style={{ fontSize:28, fontWeight:800, color:'white', lineHeight:1.3, marginBottom:16, maxWidth:420 }}>
             Organiza proyectos, prioriza tareas y detecta riesgos antes de que impacten al equipo.
@@ -56,7 +56,7 @@ export function LoginPage() {
           </div>
         </div>
         <div style={{ color:'rgba(255,255,255,0.4)', fontSize:12 }}>
-          Plataforma de gestión empresarial · Senior Technical Demo
+          Prueba técnica Senior Full Stack · NestJS + React + PostgreSQL
         </div>
       </div>
 
@@ -65,10 +65,10 @@ export function LoginPage() {
         <div style={{ width:'100%', maxWidth:420 }}>
           <div style={{ textAlign:'center', marginBottom:28 }}>
             <div style={{ display:'flex', justifyContent:'center', marginBottom:16 }}>
-              <div style={{ width:48, height:48, background:'#6366f1', borderRadius:12, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:800, fontSize:18, color:'white' }}>TF</div>
+              <div style={{ width:48, height:48, background:'#6366f1', borderRadius:12, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:800, fontSize:18, color:'white' }}>PT</div>
             </div>
             <h1 style={{ fontSize:24, fontWeight:800, color:'#0f172a', marginBottom:6 }}>Iniciar sesión</h1>
-            <p style={{ fontSize:14, color:'#94a3b8' }}>Bienvenido de vuelta a TaskFlow Pro</p>
+            <p style={{ fontSize:14, color:'#94a3b8' }}>Gestión de proyectos y tareas · Full Stack Senior</p>
           </div>
 
           <form onSubmit={handleSubmit} style={{ display:'flex', flexDirection:'column', gap:16, marginBottom:20 }} noValidate>

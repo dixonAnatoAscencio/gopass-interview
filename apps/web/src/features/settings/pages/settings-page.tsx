@@ -85,7 +85,7 @@ export function SettingsPage({ addToast }: SettingsPageProps) {
     name:  'Dixon Anato',
     email: 'admin@taskflow.com',
     role:  'Admin',
-    bio:   'Administrador principal de la plataforma TaskFlow Pro.',
+    bio:   'Administrador principal del sistema de gestión de proyectos.',
   });
   const [notifSettings, setNotifSettings] = useState<Record<string, boolean>>(
     Object.fromEntries(NOTIF_SETTINGS.map(n => [n.id, true])),

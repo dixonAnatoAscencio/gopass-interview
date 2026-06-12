@@ -45,8 +45,8 @@ function Sidebar({ currentPage, navigate, collapsed, onToggle }: SidebarProps) {
   return (
     <aside className={cls}>
       <div className="sidebar-logo">
-        <div className="sidebar-logo-icon">TF</div>
-        <div className="sidebar-logo-text">TaskFlow Pro</div>
+        <div className="sidebar-logo-icon">PT</div>
+        <div className="sidebar-logo-text">Prueba Técnica</div>
       </div>
 
       <nav className="sidebar-nav">
