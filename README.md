@@ -198,7 +198,7 @@ La lógica de transición vive en `TaskStatusVO` (Value Object) en `libs/domain`
 ### 1. Clonar e instalar
 
 ```bash
-git clone <repo>
+git clone https://github.com/dixonAnatoAscencio/gopass-interview.git
 cd gopass-interview
 npm install --legacy-peer-deps
 ```
